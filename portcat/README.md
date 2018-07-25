@@ -1,4 +1,4 @@
 Reads tha data from barcodes scaner connected to USB and emulate input by keyboard.
 Runs under windows and *nix.
-#Usage
+# Usage
 python3 portcat.zip
