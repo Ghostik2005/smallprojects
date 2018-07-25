@@ -1,0 +1,1 @@
+converts bz archived tab separated files to sqlite database file with specific format
