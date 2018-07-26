@@ -1,7 +1,22 @@
 # coding: utf-8
 
+import os
+import sys
+import time
+import socket
+import traceback
+import threading
+import subprocess
+from urllib.parse import unquote
+
+import getip
+import udpsend
+from lockfile import LockWait
+sys.PY3 = sys.version_info[0] > 2
+
 __appname__ = "ean13"
-__version__ = '18.071.1320' #переделаны ценники на образцы, заменены шрифты и содержание
+__version__ = '18.207.0950' #добавлена библиотека определения ip сервиса, добавлена функция HeartBeat
+#__version__ = '18.071.1320' #переделаны ценники на образцы, заменены шрифты и содержание
 #__version__ = '2017.255.1800' #version for superwarden update
 #__version__ = '2017.219.1530' #version for superwarden
 #__version__ = '2017.188.1700' #рефакторим код, убираем все лишнее в формировании pdf и ods,
@@ -10,25 +25,7 @@ __version__ = '18.071.1320' #переделаны ценники на образ
 #__version__ = '2017.184.1800'
 __profile__ = ""
 __index__   =-1
-
-
-import sys
-sys.PY3 = sys.version_info[0] > 2
-import os, time
-import traceback
-
-import socket
 __hostname__ = socket.gethostname().lower()
-
-import threading, random, subprocess
-from urllib.parse import unquote
-import uuid
-import glob
-import gzip
-import shutil
-import hashlib
-
-from lockfile import LockWait
 
 APPCONF = {
     "params": [],
@@ -42,7 +39,11 @@ APPCONF = {
 }
 
 def main():
-    #threading.Thread(target=s_send, args=(), daemon=True).start()
+    ips = getip.ip()
+    sys.intip = ips.get('int_ip')
+    sys.extip = ips.get('ext_ip')
+    t1 = threading.Timer(10, threading.Thread(target=udpsend.udp_send, args=(), daemon=True).start)
+    t1.start()
     rc = 0
     try:
         APPCONF["params"], APPCONF["kwargs"] = handle_commandline()
@@ -257,8 +258,13 @@ def head(aLastModified, aContentLength, fgDeflate=True, fgOds=False):
 
 def init(sock):
     addr = sock.getsockname()[:2]
-    sock.listen(150)
+    sock.listen(25)
     APPCONF["addr"] = addr
+    sys.s_port = addr[1]
+    sys.__appname__ = __appname__
+    sys.__version__ = __version__
+    sys.__profile__ = __profile__
+    sys.__index__ = __index__
     fileupstream = _getfilename("upstream")
     APPCONF["fileupstream"] = fileupstream
     data = """location /ean13 {
@@ -593,95 +599,12 @@ def _int(x):
     except:
         return x
 
-class UDPSocket(socket.socket):
-
-    def __init__(self, bind_addr=('127.0.0.1', 0), std_addr=('127.0.0.1', 4222),
-                 family=socket.AF_INET, type=socket.SOCK_DGRAM, proto=0, _sock=None):
-        super(UDPSocket, self).__init__(family=family, type=type, proto=proto)
-        try: self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        except: pass
-        try: self.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        except: pass
-        self.bind(bind_addr)
-        self._buf = []
-        self._std_addr = std_addr
-
-    def write(self, text):
-        fg = False
-        if isinstance(text, str):
-            self._buf.append(text.encode())
-            fg = text.rfind('\n') > -1
-        else:
-            self._buf.append(text)
-            fg =  text.rfind(b'\n') > -1
-        if fg:
-            data = b''.join(self._buf)[:8192]
-            self._buf.clear()
-            return self.sendto(data, self._std_addr)
-
-    def flush(self):
-        pass
-
-    def readlines(self):
-        return self.recv(8192)
-
-    def read(self, n=8192):
-        return self.recv(n)
-
-def s_send():
-    import json
-    udpsock = UDPSocket()
-    pid = os.getpid() #pid of service
-    uid = uuid.uuid4().hex #guid of service
-    extip, intip = getip()
-    #intip = '192.168.0.1' #int ip, provides for example
-    #extip = '217.12.11.1' #ext ip, provides for example
-    a_path = f'https://online365.pro/ean13' #path for access from outside
-    w_p = os.path.abspath(sys.argv[0])#full path to running script.
-    f_size = os.path.getsize(w_p) #size of running file
-    m_time = os.path.getmtime(w_p) #last modify time of running file
-#    sys.argv[0] = w_p
-    argv = '%%'.join(m for m in sys.argv) #formated string from sys.argv
-    while True: #infinite loop for heart beating
-        p_d = {'appname': __appname__, 'version': __version__, 'profile': __profile__, 'index': __index__, 'pid': pid, 'uid': uid,
-               'extip': extip, 'intip': intip, 'nginx path': a_path, 'argv': argv, 'm_time': m_time, 'size': f_size}
-        payload = json.dumps(p_d, ensure_ascii=False) #heart beat message, it needs to discuss
-        print(payload, file=udpsock) #send to UDP socket our message
-        time.sleep(2 + random.random())
-
-def getip():
-    """
-    get ip's function
-    """
-
-    _urls = ('https://sklad71.org/consul/ip/', 'http://ip-address.ru/show','http://yandex.ru/internet',
-        'http://ip-api.com/line/?fields=query', 'http://icanhazip.com', 'http://ipinfo.io/ip',
-        'https://api.ipify.org')
-    s = r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}"
-    eip = None
-    iip = ''
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as se:
-            se.connect(("77.88.8.8", 80))
-            iip = se.getsockname()[0]
-    except Exception as e:
-        log(f"err:{str(e)}")
-    import ssl, re, urllib.request
-    ssl._create_default_https_context = ssl._create_unverified_context
-    for url in _urls:
-        r = None
-        data = ''
-        try:
-            with urllib.request.urlopen(url, timeout=2) as r:
-                data = str(r.headers)
-                data += r.read().decode()
-                eip = re.findall(s, data)[0].strip()
-                break
-        except Exception as e:
-            continue
-    return eip, iip
 ########################################################################
 
 
 if "__main__" == __name__:
+    if sys.stdout.encoding != 'UTF-8':
+        sys.stdout = open(sys.stdout.fileno(), mode='w', buffering=1, encoding='UTF-8')
+    if sys.stderr.encoding != 'UTF-8':
+        sys.stderr = open(sys.stderr.fileno(), mode='w', buffering=1, encoding='UTF-8')
     main()
