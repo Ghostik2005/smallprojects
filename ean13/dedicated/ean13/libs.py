@@ -404,15 +404,19 @@ def bc30x20tag(title=u"Товар мазь крем для рук Мезим ф�
         ##drw.text((x, y), cena_label3, font=fnt12)
         #pass
     if cena_label2:
-        #c = cena_label1 + '    ' + cena_label2 + cena_label3
-        #cena_label1 = c[0:39]
-        #cena_label2 = c[39:]
-        cena_label1 += cena_label3
+        cena_label2 = cena_label2.split()
+        c = ' '.join(cena_label2[0:-1])
+        cena_label1 = cena_label1 + '    ' + c
+        if len(cena_label2) > 2:
+            cena_label2 = cena_label2[-1]
+        else:
+            cena_label2 = ''
+        cena_label2 += cena_label3
         lw1, lh1 = drw.textsize(cena_label1, font=fnt12)
-        x, y = (6, 121+((50-lh1)//2) - 0)
+        x, y = (6, 106+((50-lh1)//2) - 0)
         drw.text((x, y), cena_label1, font=fnt12)
         lw2, lh2 = drw.textsize(cena_label2, font=fnt12)
-        x, y = (3, 106+((50-lh2)//2) + 3)
+        x, y = (3, 121+((50-lh2)//2) + 3)
         drw.text((x, y), cena_label2, font=fnt12)
     elif cena_label1:
         cena_label1 += cena_label3

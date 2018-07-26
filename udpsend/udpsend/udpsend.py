@@ -9,7 +9,7 @@ import os.path
 
 class UDPSocket(socket.socket):
 
-    def __init__(self, bind_addr=('127.0.0.1', 0), std_addr=('127.0.0.1', 4222),
+    def __init__(self, bind_addr=('127.0.0.1', 0), std_addr=('127.0.0.1', 7122),
                  family=socket.AF_INET, s_type=socket.SOCK_DGRAM, proto=0, _sock=None):
         super(UDPSocket, self).__init__(family=family, type=s_type, proto=proto)
         try:
