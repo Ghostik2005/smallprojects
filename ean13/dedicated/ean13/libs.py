@@ -303,7 +303,10 @@ def bc30x20(title=u"Товар мазь крем для рук Мезим фор
     cena_label2 = ""  # u"2906"
     cena_label3 = ""  # u"15"
     _price = (u"%s" % price).split('~')
-    if len(_price) > 1:
+    #print(_price)
+    if len(_price) == 4:
+        price = _price[1]
+    elif len(_price) > 1:
         cena_label1 = _price.pop(0)
         if (not cena_label1) or tovar_label1:
             cena_label1 = u"Цена"
@@ -384,7 +387,22 @@ def bc30x20tag(title=u"Товар мазь крем для рук Мезим ф�
     cena_label2 = ""  # u"2906"
     cena_label3 = u"      Подпись"
     _price = (u"%s" % price).split('~')
-    if len(_price) > 1:
+    l_price = len(_price)
+    if l_price == 4:
+        cena_label1 = _price.pop(0)
+        #if not cena_label1:
+            #cena_label1 = u""
+        #else:
+            #cena_label1 += cena_label3
+        price = _price.pop(0)
+        c2 = _price.pop(0) if _price else u""
+        c2 = c2.replace('.', '').strip()
+        c3 = _price.pop(0) if _price else u""
+        c3 = c3.replace('.', '').strip()
+        cena_label2 = ' '.join([c3, c2])
+        #cena_label2 = _price.pop(0) if _price else u""
+        #cena_label3 = _price.pop(0) if _price else u""
+    elif l_price > 1:
         cena_label1 = _price.pop(0)
         #if not cena_label1:
             #cena_label1 = u""
@@ -404,20 +422,29 @@ def bc30x20tag(title=u"Товар мазь крем для рук Мезим ф�
         ##drw.text((x, y), cena_label3, font=fnt12)
         #pass
     if cena_label2:
-        cena_label2 = cena_label2.split()
-        c = ' '.join(cena_label2[0:-1])
-        cena_label1 = cena_label1 + '    ' + c
-        if len(cena_label2) > 2:
-            cena_label2 = cena_label2[-1]
+        if l_price == 4:
+            cena_label2 += cena_label3
+            lw1, lh1 = drw.textsize(cena_label1, font=fnt12)
+            x, y = (6, 106+((50-lh1)//2) - 0)
+            drw.text((x, y), cena_label1, font=fnt12)
+            lw2, lh2 = drw.textsize(cena_label2, font=fnt12)
+            x, y = (3, 121+((50-lh2)//2) + 3)
+            drw.text((x, y), cena_label2, font=fnt12)
         else:
-            cena_label2 = ''
-        cena_label2 += cena_label3
-        lw1, lh1 = drw.textsize(cena_label1, font=fnt12)
-        x, y = (6, 106+((50-lh1)//2) - 0)
-        drw.text((x, y), cena_label1, font=fnt12)
-        lw2, lh2 = drw.textsize(cena_label2, font=fnt12)
-        x, y = (3, 121+((50-lh2)//2) + 3)
-        drw.text((x, y), cena_label2, font=fnt12)
+            cena_label2 = cena_label2.split()
+            c = ' '.join(cena_label2[0:-1])
+            cena_label1 = cena_label1 + '    ' + c
+            if len(cena_label2) > 2:
+                cena_label2 = cena_label2[-1]
+            else:
+                cena_label2 = ''
+            cena_label2 += cena_label3
+            lw1, lh1 = drw.textsize(cena_label1, font=fnt12)
+            x, y = (6, 106+((50-lh1)//2) - 0)
+            drw.text((x, y), cena_label1, font=fnt12)
+            lw2, lh2 = drw.textsize(cena_label2, font=fnt12)
+            x, y = (3, 121+((50-lh2)//2) + 3)
+            drw.text((x, y), cena_label2, font=fnt12)
     elif cena_label1:
         cena_label1 += cena_label3
         lw1, lh1 = drw.textsize(cena_label1, font=fnt12)
@@ -520,6 +547,8 @@ def images(rows, method):
         except Exception as e:
             a = []
             b = []
+        #print(a)
+        #print(b)
         if len(a) < 4:
             continue
         for img in bc30x20(*a, full_info=b, method=method):
