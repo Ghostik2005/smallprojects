@@ -36,6 +36,7 @@ class Connect:
         """
         возвращаем соединение в пул
         """
+        self.reset()
         return self.parent._close(self)
 
     def cursor(self):
